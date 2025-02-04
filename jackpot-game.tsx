@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { createPublicClient, createWalletClient, getContract, http } from "viem"
+import { createWalletClient, getContract, http } from "viem"
 import { base } from "viem/chains"
 
 declare global {
@@ -37,25 +37,29 @@ const GRAND_JACKPOT_SYMBOL = "🎰"
 const SYMBOLS = [
   "🍒",
   "🍋",
-  "🍊",
-  "🍇",
-  "🍓",
-  "🍑",
-  "🍍",
-  "🥝",
-  "🍎",
-  "🎲",
-  "♠️",
-  "♥️",
-  "🃏",
-  "🧩",
-  "♟",
-  "♣️",
-  "♦️",
-  "🎮",
-  "🕹",
-  "👾",
 ]
+// const SYMBOLS = [
+//   "🍒",
+//   "🍋",
+//   "🍊",
+//   "🍇",
+//   "🍓",
+//   "🍑",
+//   "🍍",
+//   "🥝",
+//   "🍎",
+//   "🎲",
+//   "♠️",
+//   "♥️",
+//   "🃏",
+//   "🧩",
+//   "♟",
+//   "♣️",
+//   "♦️",
+//   "🎮",
+//   "🕹",
+//   "👾",
+// ]
 const SPIN_DURATION = 4000
 const DEX_SCREENER_API_URL =
   "https://api.dexscreener.com/latest/dex/pairs/base/0x505e305dd74dec1ed522e8450087f11324102bb6"
@@ -844,13 +848,6 @@ const JackpotGame: React.FC = () => {
                     Claim {formatNumber(winAmount)} $JACKPOT
                   </Button>
                 )}
-                <Button onClick={() => {
-                  setWinAmount(50000)
-                  setHasWon(true)
-                  setMessage("Congratulations! You won the Jackpot!")
-                }} className="w-full bg-green-500 text-white hover:bg-green-600">
-                  Test Claim
-                </Button>
                 <Button
                   onClick={disconnectWallet}
                   variant="destructive"
