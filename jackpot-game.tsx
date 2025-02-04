@@ -29,7 +29,7 @@ declare global {
 const web3 = new Web3(new Web3.providers.HttpProvider("https://base.drpc.org"))
 
 const JACKPOT_ADDRESS = "0x2C8dD0b0604Cc478ada32bEb7bC415e94ED4DE32"
-const CLAIM_CONTRACT_ADDRESS = "0xE5c90D2e762AC7c3B67e98D17666776A19440f93"
+const CLAIM_CONTRACT_ADDRESS: `0x${string}` = "0xE5c90D2e762AC7c3B67e98D17666776A19440f93"
 const CLANKSTER_ADDRESS = "0x3E1A6D23303bE04403BAdC8bFF348027148Fef27"
 const PRIZE_WALLET = "0xBafF4708D94D3677E6823397596c9AC40919e0aE"
 const PLAY_COST = 100000
@@ -93,6 +93,48 @@ const sendPlayTxn = async (address: `0x${string}`) => {
   })
   const contract = getContract({ abi: JackpotABI, address: CLAIM_CONTRACT_ADDRESS, client: { wallet } })
   await contract.write.play([address])
+}
+
+const genSig = async (amount: BigInt, winner: string) => {
+  const chainId = 8453;
+  const domainName = 'JackpotGameStore';
+  const domainVersion = '1';
+
+  const account = privateKeyToAccount(process.env.NEXT_PUBLIC_PRIVATE_KEY as `0x${string}`)
+
+  const client = createWalletClient({
+    account,
+    chain: base,
+    transport: http(),
+  });
+
+  const domain = {
+    name: domainName,
+    version: domainVersion,
+    chainId,
+    verifyingContract: CLAIM_CONTRACT_ADDRESS,
+  };
+
+  const types = {
+    claim: [
+      { name: 'winner', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+  };
+
+  const message = {
+    winner: winner || account.address,
+    amount,
+  };
+
+  const signature = await client.signTypedData({
+    domain,
+    types,
+    primaryType: 'claim',
+    message,
+  });
+
+  return signature
 }
 
 const checkAllowance = async (amount: number, user: `0x${string}`) => {
@@ -289,19 +331,35 @@ const JackpotGame: React.FC = () => {
 
       setMessage("Sending claim transaction...")
 
-      const gasEstimate = await contract.methods.claimPrize(amountInWei).estimateGas({ from: account })
-      console.log("Estimated gas:", gasEstimate)
+      const sig = await genSig(BigInt(amountInWei), account);
 
-      const gasLimit = Math.ceil(Number(gasEstimate) * 1.2)
-
-      const tx = await contract.methods.claimPrize(amountInWei).send({
-        from: account,
-        gas: gasLimit.toString(),
+      const { data } = contract.methods.claim(sig, BigInt(amountInWei)).populateTransaction({
+        from: account
       })
+
+      const tx = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: account,
+            to: CLAIM_CONTRACT_ADDRESS,
+            data,
+          },
+        ],
+      })
+
+      let receipt = null
+      while (!receipt) {
+        receipt = await window.ethereum.request({
+          method: "eth_getTransactionReceipt",
+          params: [tx],
+        })
+        if (!receipt) await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
 
       console.log("Transaction result:", tx)
 
-      if (tx.status) {
+      if (receipt) {
         setHasWon(false)
         setWinAmount(0)
         setMessage("Prize claimed successfully!")
@@ -781,11 +839,18 @@ const JackpotGame: React.FC = () => {
                   Deposit for {depositAmount} Play{depositAmount !== 1 ? "s" : ""}
                 </Button>
 
-                {!hasWon && (
+                {hasWon && (
                   <Button onClick={claimPrize} className="w-full bg-green-500 text-white hover:bg-green-600">
                     Claim {formatNumber(winAmount)} $JACKPOT
                   </Button>
                 )}
+                <Button onClick={() => {
+                  setWinAmount(50000)
+                  setHasWon(true)
+                  setMessage("Congratulations! You won the Jackpot!")
+                }} className="w-full bg-green-500 text-white hover:bg-green-600">
+                  Test Claim
+                </Button>
                 <Button
                   onClick={disconnectWallet}
                   variant="destructive"
