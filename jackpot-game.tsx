@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Wallet, Play, Plus, Minus, HelpCircle } from "lucide-react"
 import { JackpotABI } from "./JackpotABI"
+import { privateKeyToAccount } from "viem/accounts"
 import Web3 from "web3"
 import {
   Dialog,
@@ -16,14 +17,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { createPublicClient, createWalletClient, getContract, http } from "viem"
+import { base } from "viem/chains"
+
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
 
 const web3 = new Web3(new Web3.providers.HttpProvider("https://base.drpc.org"))
 
 const JACKPOT_ADDRESS = "0x2C8dD0b0604Cc478ada32bEb7bC415e94ED4DE32"
-const CLAIM_CONTRACT_ADDRESS = "0xE5c90D2e762AC7c3B67e98D17666776A19440f93" // This will need to be updated with the new deployed address
+const CLAIM_CONTRACT_ADDRESS = "0xE5c90D2e762AC7c3B67e98D17666776A19440f93"
 const CLANKSTER_ADDRESS = "0x3E1A6D23303bE04403BAdC8bFF348027148Fef27"
 const PRIZE_WALLET = "0xBafF4708D94D3677E6823397596c9AC40919e0aE"
-const PLAY_COST = 100000 // Cost per play in tokens
+const PLAY_COST = 100000
 const GRAND_JACKPOT_SYMBOL = "🎰"
 const SYMBOLS = [
   "🍒",
@@ -69,7 +78,58 @@ const FREE_PLAY_TIERS = [
   { threshold: 0, plays: 0 },
 ]
 
-const SlotReel = ({ spinning, symbol, index }: { spinning: any, symbol: any, index: number }) => {
+interface SlotReelProps {
+  spinning: boolean
+  symbol: string
+  index: number
+}
+
+const sendPlayTxn = async (address: `0x${string}`) => {
+  const account = privateKeyToAccount(process.env.NEXT_PUBLIC_PRIVATE_KEY as `0x${string}`)
+  const wallet = createWalletClient({
+    account,
+    chain: base,
+    transport: http()
+  })
+  const contract = getContract({ abi: JackpotABI, address: CLAIM_CONTRACT_ADDRESS, client: { wallet } })
+  await contract.write.play([address])
+}
+
+const checkAllowance = async (amount: number, user: `0x${string}`) => {
+  const contract = new web3.eth.Contract(
+    [
+      {
+        "constant": true,
+        "inputs": [
+          {
+            "name": "_owner",
+            "type": "address"
+          },
+          {
+            "name": "_spender",
+            "type": "address"
+          }
+        ],
+        "name": "allowance",
+        "outputs": [
+          {
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ],
+    JACKPOT_ADDRESS,
+  )
+
+  const allowance = await contract.methods.allowance(user, CLAIM_CONTRACT_ADDRESS).call()
+  return Number(allowance) > amount
+}
+
+const SlotReel: React.FC<SlotReelProps> = ({ spinning, symbol, index }) => {
   const reelSymbols = [...SYMBOLS, ...SYMBOLS, ...SYMBOLS]
   return (
     <div className="w-24 h-24 border-4 border-yellow-500 rounded-lg overflow-hidden relative">
@@ -137,13 +197,25 @@ const HowToPlayDialog = () => (
   </Dialog>
 )
 
-const JackpotGame = () => {
-  const [account, setAccount] = useState(null)
-  const [prizePool, setPrizePool] = useState({ usd: 0, tokens: 0 })
+interface PlayerState {
+  freePlays: number
+  purchasedPlays: number
+  tokenBalance: string
+  clanksterBalance: string
+}
+
+interface PrizePool {
+  usd: number
+  tokens: number
+}
+
+const JackpotGame: React.FC = () => {
+  const [account, setAccount] = useState<`0x${string}` | null>(null)
+  const [prizePool, setPrizePool] = useState<PrizePool>({ usd: 0, tokens: 0 })
   const [isSpinning, setIsSpinning] = useState(false)
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"])
   const [depositAmount, setDepositAmount] = useState(1)
-  const [playerState, setPlayerState] = useState({
+  const [playerState, setPlayerState] = useState<PlayerState>({
     freePlays: 0,
     purchasedPlays: 0,
     tokenBalance: "0",
@@ -170,7 +242,7 @@ const JackpotGame = () => {
       )
 
       const balance = await contract.methods.balanceOf(walletAddress).call()
-      return web3.utils.fromWei(balance as any, "ether")
+      return web3.utils.fromWei(Number(balance), "ether")
     } catch (error) {
       console.error(`Failed to get balance for token ${tokenAddress}:`, error)
       return "0"
@@ -193,7 +265,7 @@ const JackpotGame = () => {
       const contract = new web3.eth.Contract(JackpotABI, CLAIM_CONTRACT_ADDRESS)
       const prizeWalletBalance = await contract.methods.getPrizePoolBalance().call()
 
-      const tokensAmount = Number.parseFloat(web3.utils.fromWei(prizeWalletBalance as any, "ether"))
+      const tokensAmount = Number.parseFloat(web3.utils.fromWei(Number(prizeWalletBalance), "ether"))
       const usdValue = tokensAmount * tokenPrice
 
       setPrizePool({
@@ -220,11 +292,11 @@ const JackpotGame = () => {
       const gasEstimate = await contract.methods.claimPrize(amountInWei).estimateGas({ from: account })
       console.log("Estimated gas:", gasEstimate)
 
-      const gasLimit = Math.ceil(gasEstimate * 1.2)
+      const gasLimit = Math.ceil(Number(gasEstimate) * 1.2)
 
       const tx = await contract.methods.claimPrize(amountInWei).send({
         from: account,
-        gas: gasLimit,
+        gas: gasLimit.toString(),
       })
 
       console.log("Transaction result:", tx)
@@ -238,7 +310,7 @@ const JackpotGame = () => {
       } else {
         throw new Error("Prize claim transaction failed")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to claim prize:", error)
       const errorMessage = error.code === 4001 ? "Transaction was cancelled" : error.message || "Unknown error"
       setMessage(`Failed to claim prize: ${errorMessage}`)
@@ -247,7 +319,7 @@ const JackpotGame = () => {
   }
 
   const getPlayerBalances = useCallback(
-    async (address) => {
+    async (address: string) => {
       if (!address) return
       try {
         const [jackpotBalance, clanksterBalance] = await Promise.all([
@@ -273,7 +345,7 @@ const JackpotGame = () => {
     [getTokenBalance],
   )
 
-  const updateFreePlays = async (address, clanksterBalance) => {
+  const updateFreePlays = async (address: string, clanksterBalance: string) => {
     const balanceInMillions = Math.floor(Number(clanksterBalance) / 1000000)
     const tier = FREE_PLAY_TIERS.find((tier) => balanceInMillions >= tier.threshold / 1000000)
     const calculatedFreePlays = tier ? tier.plays : 0
@@ -315,7 +387,7 @@ const JackpotGame = () => {
       setAccount(connectedAccount)
       window.ethereum.on("accountsChanged", handleAccountChange)
 
-      const storedPlays = getStoredPlays(connectedAccount)
+      const storedPlays = await getStoredPlays(connectedAccount)
       const storedFreePlays = getStoredFreePlays(connectedAccount)
       setPlayerState((prev) => ({
         ...prev,
@@ -347,9 +419,9 @@ const JackpotGame = () => {
     window.ethereum?.removeListener("accountsChanged", handleAccountChange)
   }
 
-  const handleAccountChange = (accounts) => {
+  const handleAccountChange = (accounts: string[]) => {
     if (accounts.length > 0) {
-      setAccount(accounts[0])
+      setAccount(accounts[0] as any)
     } else {
       disconnectWallet()
     }
@@ -357,17 +429,66 @@ const JackpotGame = () => {
 
   const deposit = async () => {
     if (!account) return
+    const isAllowed = await checkAllowance(PLAY_COST * depositAmount * (10 ** 18), account)
     try {
-      const amount = BigInt(PLAY_COST * depositAmount * 10 ** 18)
-        .toString(16)
-        .padStart(64, "0")
+      if (!isAllowed) {
+        const contract = new web3.eth.Contract(
+          [
+            {
+              "constant": true,
+              "inputs": [
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "approve",
+              "outputs": [
+                {
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "payable": false,
+              "stateMutability": "view",
+              "type": "function"
+            }
+          ],
+          JACKPOT_ADDRESS,
+        )
+        const { data } = contract.methods.approve(CLAIM_CONTRACT_ADDRESS, 100 * PLAY_COST * (10 ** 18)).populateTransaction({
+          from: account
+        })
+        const txHash = await window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: account,
+              to: JACKPOT_ADDRESS,
+              data
+            },
+          ],
+        })
+        let receipt = null
+        while (!receipt) {
+          receipt = await window.ethereum.request({
+            method: "eth_getTransactionReceipt",
+            params: [txHash],
+          })
+          if (!receipt) await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      }
       const txHash = await window.ethereum.request({
         method: "eth_sendTransaction",
         params: [
           {
             from: account,
-            to: JACKPOT_ADDRESS,
-            data: `0xa9059cbb${PRIZE_WALLET.slice(2).padStart(64, "0")}${amount}`,
+            to: CLAIM_CONTRACT_ADDRESS,
+            data: `0xb6b55f25${depositAmount.toString().padStart(64, "0")}`,
           },
         ],
       })
@@ -402,13 +523,14 @@ const JackpotGame = () => {
     try {
       setIsSpinning(true)
       setMessage("")
+      await sendPlayTxn(account)
 
       let spinning = true
       const spinInterval = setInterval(() => {
         if (spinning) {
           setReels(
             Array(3)
-              .fill()
+              .fill("")
               .map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
           )
         }
@@ -419,7 +541,7 @@ const JackpotGame = () => {
       clearInterval(spinInterval)
 
       const finalReels = Array(3)
-        .fill()
+        .fill("")
         .map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)])
       setReels(finalReels)
 
@@ -479,7 +601,7 @@ const JackpotGame = () => {
     const intervalId = setInterval(fetchPrizeAndPrice, 60000) // Update every minute
 
     return () => clearInterval(intervalId)
-  }, [])
+  }, [fetchTokenPrice, getJackpotPrize])
 
   useEffect(() => {
     if (account) {
@@ -507,7 +629,7 @@ const JackpotGame = () => {
   }, [account, getPlayerBalances])
 
   const formatNumber = (num: number | string): string => {
-    return Math.floor(Number.parseFloat(num)).toLocaleString()
+    return Math.floor(Number.parseFloat(num.toString())).toLocaleString()
   }
 
   const handleDepositInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -517,9 +639,11 @@ const JackpotGame = () => {
     }
   }
 
-  const getStoredPlays = (address: string): number => {
-    const storedPlays = localStorage.getItem(`purchasedPlays_${address}`)
-    return storedPlays ? Number.parseInt(storedPlays, 10) : 0
+  const getStoredPlays = async (address: string): Promise<number> => {
+    const contract = new web3.eth.Contract(JackpotABI, CLAIM_CONTRACT_ADDRESS)
+    const plays = await contract.methods.playsLeft(address).call();
+    console.log(plays)
+    return Number(plays);
   }
 
   const updateStoredPlays = (address: string, plays: number) => {
@@ -657,7 +781,7 @@ const JackpotGame = () => {
                   Deposit for {depositAmount} Play{depositAmount !== 1 ? "s" : ""}
                 </Button>
 
-                {hasWon && (
+                {!hasWon && (
                   <Button onClick={claimPrize} className="w-full bg-green-500 text-white hover:bg-green-600">
                     Claim {formatNumber(winAmount)} $JACKPOT
                   </Button>
@@ -680,4 +804,3 @@ const JackpotGame = () => {
 }
 
 export default JackpotGame
-
