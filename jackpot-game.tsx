@@ -37,29 +37,25 @@ const GRAND_JACKPOT_SYMBOL = "🎰"
 const SYMBOLS = [
   "🍒",
   "🍋",
+  "🍊",
+  "🍇",
+  "🍓",
+  "🍑",
+  "🍍",
+  "🥝",
+  "🍎",
+  "🎲",
+  "♠️",
+  "♥️",
+  "🃏",
+  "🧩",
+  "♟",
+  "♣️",
+  "♦️",
+  "🎮",
+  "🕹",
+  "👾",
 ]
-// const SYMBOLS = [
-//   "🍒",
-//   "🍋",
-//   "🍊",
-//   "🍇",
-//   "🍓",
-//   "🍑",
-//   "🍍",
-//   "🥝",
-//   "🍎",
-//   "🎲",
-//   "♠️",
-//   "♥️",
-//   "🃏",
-//   "🧩",
-//   "♟",
-//   "♣️",
-//   "♦️",
-//   "🎮",
-//   "🕹",
-//   "👾",
-// ]
 const SPIN_DURATION = 4000
 const DEX_SCREENER_API_URL =
   "https://api.dexscreener.com/latest/dex/pairs/base/0x505e305dd74dec1ed522e8450087f11324102bb6"
@@ -583,6 +579,13 @@ const JackpotGame: React.FC = () => {
   const play = async () => {
     if (!account || isSpinning || (playerState.purchasedPlays === 0 && playerState.freePlays === 0)) return
     try {
+      const storedPlays = await getStoredPlays(account)
+      const storedFreePlays = getStoredFreePlays(account)
+      setPlayerState((prev) => ({
+        ...prev,
+        purchasedPlays: storedPlays,
+        freePlays: storedFreePlays,
+      }))
       setIsSpinning(true)
       setMessage("")
       await sendPlayTxn(account)
