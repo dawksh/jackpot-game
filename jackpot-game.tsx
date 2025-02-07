@@ -58,7 +58,7 @@ const SYMBOLS = [
 ]
 const SPIN_DURATION = 4000
 const DEX_SCREENER_API_URL =
-  "https://api.dexscreener.com/latest/dex/pairs/base/0x505e305dd74dec1ed522e8450087f11324102bb6"
+  "https://api.dexscreener.com/latest/dex/pairs/base/0x1D348c34D0a72789487845311bAc9616ca36Ed7a"
 
 const BASE_NETWORK = {
   chainId: "0x2105",
