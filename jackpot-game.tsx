@@ -219,7 +219,7 @@ const HowToPlayDialog = () => (
           <li>Connect your wallet to start playing.</li>
           <li>Each spin costs 100,000 $JACKPOT tokens.</li>
           <li>Match three symbols to win. 🎰🎰🎰 wins the grand jackpot!</li>
-          <li>Any other three matching symbols win half the jackpot.</li>
+          <li>Any other three matching symbols win 10% the jackpot.</li>
         </ul>
         <p>
           <strong>Free Plays:</strong>
