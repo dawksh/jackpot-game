@@ -622,7 +622,7 @@ const JackpotGame: React.FC = () => {
         setHasWon(true)
         setMessage("Congratulations! You won the Grand Jackpot!")
       } else if (isJackpot) {
-        setWinAmount(Math.floor(prizePool.tokens * 0.25))
+        setWinAmount(Math.floor(prizePool.tokens * 0.1))
         setHasWon(true)
         setMessage("Congratulations! You won the Jackpot!")
       } else {
