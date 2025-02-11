@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { createWalletClient, getContract, http } from "viem"
 import { base } from "viem/chains"
+import Link from "next/link"
 
 declare global {
   interface Window {
@@ -234,6 +235,7 @@ const HowToPlayDialog = () => (
           <li>1B+: 35 free plays</li>
         </ul>
         <p>Free plays reset daily. Enjoy responsibly!</p>
+        <Link href="/tos" className="text-blue-500 hover:underline">Terms of Service</Link>
       </div>
     </DialogContent>
   </Dialog>
