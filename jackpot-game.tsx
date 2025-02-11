@@ -487,6 +487,10 @@ const JackpotGame: React.FC = () => {
 
   const deposit = async () => {
     if (!account) return
+    if (depositAmount > 10) {
+      setMessage("Cannot deposit for more than 10 plays.")
+      return
+    }
     const isAllowed = await checkAllowance(PLAY_COST * depositAmount * (10 ** 18), account)
     try {
       if (!isAllowed) {
