@@ -152,7 +152,7 @@ export default function TermsOfService() {
                     For inquiries or community discussions, join us on:
                 </p>
                 <ul className="list-disc pl-8">
-                    <li>X (<a href="https://x.com/Jackpotgame" className="text-blue-500 hover:underline">@Jackpotgame</a>)</li>
+                    <li>X (<a href="https://x.com/Jackpotgame_" className="text-blue-500 hover:underline">@Jackpotgame</a>)</li>
                     <li>Telegram (<a href="https://t.me/jackpotonbase" className="text-blue-500 hover:underline">@jackpotonbase</a>)</li>
                     <li>Warpcast (<a href="https://warpcast.com/jackpotgame" className="text-blue-500 hover:underline">@jackpotgame</a>)</li>
                 </ul>
