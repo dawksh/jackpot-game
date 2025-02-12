@@ -76,40 +76,40 @@ export default function TermsOfService() {
                     <li>Sell fees from $JACKPOT token transactions.</li>
                 </ul>
                 <p className="mb-4">
-                    10% of every deposit is allocated to an operational reserve to help sustain game development and ongoing prize pool funding.
+                    17.5% of every deposit is allocated to an operational reserve to help sustain game development and ongoing prize pool funding.
                 </p>
                 <p>
-                    Payouts are executed directly via the smart contract upon a winning spin. Players will need to manually claim their winnings from the game.
+                    Payouts are executed directly via the smart contract upon a winning spin. Players will need to manually claim their winnings from the game interface.
                 </p>
             </section>
 
             <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">6. Odds of Winning</h2>
                 <p className="mb-4">
-                    Disclaimer: The following odds are estimated based on our best calculations and may vary due to randomness and system mechanics.
+                    Disclaimer: The following odds are estimated based on our best calculations and may vary due to randomness and system mechanics. To ensure the long-term sustainability of the game, we may adjust odds as needed.
                 </p>
                 <h3 className="text-xl font-semibold mb-2">Full Jackpot (🎰🎰🎰)</h3>
                 <p className="mb-4">
-                    Odds: 1 in 15,625 spins
+                    Odds: 1 in 50,653 spins
                 </p>
                 <p className="mb-4">
                     Calculation:
                 </p>
                 <ul className="list-disc pl-8 mb-4">
-                    <li>Each reel has a 1 in 25 chance to land on 🎰.</li>
-                    <li>(1/25) × (1/25) × (1/25) = 1/15,625 spins, which is about 1 in 15,625 spins.</li>
+                    <li>Each reel has a 1 in 37 chance to land on 🎰.</li>
+                    <li>(1/37) × (1/37) × (1/37) = 1/50,653, which is about 1 in 50,653 spins.</li>
                 </ul>
                 <h3 className="text-xl font-semibold mb-2">Partial Jackpot (Any 3 matching non-🎰 symbols)</h3>
                 <p className="mb-4">
-                    Odds: Approximately 1 in 651 spins
+                    Odds: Approximately 1 in 1,456 spins
                 </p>
                 <p className="mb-4">
                     Calculation:
                 </p>
                 <ul className="list-disc pl-8 mb-4">
-                    <li>For any specific non-🎰 symbol, the chance on one reel is 1 in 25.</li>
-                    <li>The probability for three matching non-🎰 symbols is (1/25)³ = 1/15,625.</li>
-                    <li>With 24 possible non-🎰 symbols, the total probability is 24 × 1/15,625 = 1/651, which is about 1 in 651 spins.</li>
+                    <li>For any specific non-🎰 symbol, the chance on one reel is 1 in 37.</li>
+                    <li>The probability for three matching non-🎰 symbols is (1/37)³ = 1/50,653.</li>
+                    <li>With 36 possible non-🎰 symbols, the total probability is 36 × 1/50,653 = 1/1,456, which is about 1 in 1,456 spins.</li>
                 </ul>
             </section>
 
