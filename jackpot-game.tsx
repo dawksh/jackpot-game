@@ -27,7 +27,7 @@ declare global {
   }
 }
 
-const web3 = new Web3(new Web3.providers.HttpProvider("https://base.drpc.org"))
+const web3 = new Web3(new Web3.providers.HttpProvider(process.env.NEXT_PUBLIC_RPC_URL as string))
 
 const JACKPOT_ADDRESS = "0x1b7fE509d6129166a77aE351ce48b531F0946D82"
 const CLAIM_CONTRACT_ADDRESS: `0x${string}` = "0xcb8F593526Ef882a153CfD80D17DbBB9576CcF7c"
