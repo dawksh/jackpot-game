@@ -919,6 +919,13 @@ const JackpotGame: React.FC = () => {
         </Card>
       )}
 
+      <Card className="bg-blue-100 border-blue-300">
+        <CardContent className="p-4">
+          <p className="text-blue-800">Note: To use your free plays, you must first deposit for at least one paid spin.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card className="bg-gradient-to-b from-gray-900 to-gray-800">
         <CardContent className="pt-6">
           <div className="flex justify-between items-center mb-4">
