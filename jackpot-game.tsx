@@ -701,9 +701,11 @@ const JackpotGame: React.FC = () => {
       }));
       setIsSpinning(true);
       setMessage("");
-      await sendPlayTxn(account);
+
+      if (playerState.purchasedPlays != 0) await sendPlayTxn(account);
 
       let spinning = true;
+
       const spinInterval = setInterval(() => {
         if (spinning) {
           setReels(
@@ -728,6 +730,7 @@ const JackpotGame: React.FC = () => {
       const finalReels = Array(3)
         .fill("")
         .map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]);
+
       setReels(finalReels);
 
       const isGrandJackpot = finalReels.every(
