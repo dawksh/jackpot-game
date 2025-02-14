@@ -305,7 +305,7 @@ const JackpotGame: React.FC = () => {
     tokens: 0,
   });
   const [isSpinning, setIsSpinning] = useState(false);
-  const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
+  const [reels, setReels] = useState(["❓", "❓", "❓"]);
   const [depositAmount, setDepositAmount] = useState(1);
   const [playerState, setPlayerState] = useState<PlayerState>({
     freePlays: 0,
