@@ -101,7 +101,7 @@ export default function TermsOfService() {
                 </ul>
                 <h3 className="text-xl font-semibold mb-2">Partial Jackpot (Any 3 matching non-🎰 symbols)</h3>
                 <p className="mb-4">
-                    Odds: Approximately 1 in 1,456 spins
+                    Odds: Approximately 1 in 1,407 spins
                 </p>
                 <p className="mb-4">
                     Calculation:
@@ -109,7 +109,7 @@ export default function TermsOfService() {
                 <ul className="list-disc pl-8 mb-4">
                     <li>For any specific non-🎰 symbol, the chance on one reel is 1 in 37.</li>
                     <li>The probability for three matching non-🎰 symbols is (1/37)³ = 1/50,653.</li>
-                    <li>With 36 possible non-🎰 symbols, the total probability is 36 × 1/50,653 = 1/1,456, which is about 1 in 1,456 spins.</li>
+                    <li>With 36 possible non-🎰 symbols, the total probability is 36 × 1/50,653 = 1/1,456, which is about 1 in 1,407 spins.</li>
                 </ul>
             </section>
 
