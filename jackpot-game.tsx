@@ -20,6 +20,7 @@ import {
 import { createWalletClient, getContract, http } from "viem";
 import { base } from "viem/chains";
 import Link from "next/link";
+import axios from "axios"
 
 declare global {
   interface Window {
@@ -123,49 +124,7 @@ const sendPlayTxn = async (address: `0x${string}`) => {
   await contract.write.play([address]);
 };
 
-const genSig = async (amount: BigInt, winner: string) => {
-  const chainId = 8453;
-  const domainName = "JackpotGameStore";
-  const domainVersion = "1";
 
-  const account = privateKeyToAccount(
-    process.env.NEXT_PUBLIC_PRIVATE_KEY as `0x${string}`
-  );
-
-  const client = createWalletClient({
-    account,
-    chain: base,
-    transport: http(),
-  });
-
-  const domain = {
-    name: domainName,
-    version: domainVersion,
-    chainId,
-    verifyingContract: CLAIM_CONTRACT_ADDRESS,
-  };
-
-  const types = {
-    claim: [
-      { name: "winner", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-  };
-
-  const message = {
-    winner: winner || account.address,
-    amount,
-  };
-
-  const signature = await client.signTypedData({
-    domain,
-    types,
-    primaryType: "claim",
-    message,
-  });
-
-  return signature;
-};
 
 const checkAllowance = async (amount: number, user: `0x${string}`) => {
   const contract = new web3.eth.Contract(
@@ -402,10 +361,15 @@ const JackpotGame: React.FC = () => {
 
       setMessage("Sending claim transaction...");
 
-      const sig = await genSig(BigInt(amountInWei), account);
+      const { data: { signature } } = await axios.get("/api/signature", {
+        params: {
+          amount: amountInWei,
+          winner: account
+        }
+      })
 
       const { data } = contract.methods
-        .claim(sig, BigInt(amountInWei))
+        .claim(signature, BigInt(amountInWei))
         .populateTransaction({
           from: account,
         });
