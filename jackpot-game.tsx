@@ -651,7 +651,8 @@ const JackpotGame: React.FC = () => {
   const play = async () => {
     if (
       !account ||
-      isSpinning
+      isSpinning ||
+      (playerState.purchasedPlays === 0 && playerState.freePlays === 0)
     )
       return;
     try {
@@ -707,7 +708,7 @@ const JackpotGame: React.FC = () => {
         setWinAmount(prizePool.tokens);
         setHasWon(true);
         setMessage("Congratulations! You won the Grand Jackpot!");
-      } else if (!isJackpot) {
+      } else if (isJackpot) {
         setWinAmount(Math.floor(prizePool.tokens * 0.1));
         setHasWon(true);
         setMessage("Congratulations! You won the Jackpot!");
