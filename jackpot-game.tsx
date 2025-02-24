@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Wallet, Play, Plus, Minus, HelpCircle } from "lucide-react";
 import { JackpotABI } from "./JackpotABI";
-import { privateKeyToAccount } from "viem/accounts";
 import Web3 from "web3";
 import {
   Dialog,
@@ -17,10 +16,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createWalletClient, getContract, http } from "viem";
-import { base } from "viem/chains";
 import Link from "next/link";
-import axios from "axios"
+import axios from "axios";
 
 declare global {
   interface Window {
@@ -34,7 +31,7 @@ const web3 = new Web3(
 
 const JACKPOT_ADDRESS = "0x1b7fE509d6129166a77aE351ce48b531F0946D82";
 const CLAIM_CONTRACT_ADDRESS: `0x${string}` =
-  "0xcb8F593526Ef882a153CfD80D17DbBB9576CcF7c";
+  "0x1C5AbC7f44ebc6309f88c973424C92daE16926c2";
 const CLANKSTER_ADDRESS = "0x3E1A6D23303bE04403BAdC8bFF348027148Fef27";
 const PRIZE_WALLET = "0x4793646Fc788c2B06BdDD1b271d8f07b7B1a1504";
 const PLAY_COST = 100000;
@@ -108,23 +105,10 @@ interface SlotReelProps {
 }
 
 const sendPlayTxn = async (address: `0x${string}`) => {
-  const account = privateKeyToAccount(
-    process.env.NEXT_PUBLIC_PRIVATE_KEY as `0x${string}`
-  );
-  const wallet = createWalletClient({
-    account,
-    chain: base,
-    transport: http(),
-  });
-  const contract = getContract({
-    abi: JackpotABI,
-    address: CLAIM_CONTRACT_ADDRESS,
-    client: { wallet },
-  });
-  await contract.write.play([address]);
+  await axios.post("/api/play", {
+    player: address
+  })
 };
-
-
 
 const checkAllowance = async (amount: number, user: `0x${string}`) => {
   const contract = new web3.eth.Contract(
@@ -276,6 +260,13 @@ const JackpotGame: React.FC = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [message, setMessage] = useState("");
   const [tokenPrice, setTokenPrice] = useState(0);
+  const [isMigrated, setIsMigrated] = useState(false);
+
+  useEffect(() => {
+    if (window) {
+      setIsMigrated(Boolean(window.localStorage.getItem("upgrade")));
+    }
+  }, []);
 
   const getTokenBalance = useCallback(
     async (tokenAddress: string, walletAddress: string) => {
@@ -361,12 +352,14 @@ const JackpotGame: React.FC = () => {
 
       setMessage("Sending claim transaction...");
 
-      const { data: { signature } } = await axios.get("/api/signature", {
+      const {
+        data: { signature },
+      } = await axios.get("/api/signature", {
         params: {
           amount: amountInWei,
-          winner: account
-        }
-      })
+          winner: account,
+        },
+      });
 
       const { data } = contract.methods
         .claim(signature, BigInt(amountInWei))
@@ -648,6 +641,45 @@ const JackpotGame: React.FC = () => {
     }
   };
 
+  const migrateContract = async () => {
+    if (isMigrated) {
+      return;
+    }
+    const contract = new web3.eth.Contract(
+      JackpotABI,
+      CLAIM_CONTRACT_ADDRESS
+    );
+
+    const { data } = contract.methods
+      .updateContract()
+      .populateTransaction({
+        from: account as string,
+      });
+
+    const tx = await window.ethereum.request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: account,
+          to: CLAIM_CONTRACT_ADDRESS,
+          data,
+        },
+      ],
+    });
+
+    let receipt = null;
+    while (!receipt) {
+      receipt = await window.ethereum.request({
+        method: "eth_getTransactionReceipt",
+        params: [tx],
+      });
+      if (!receipt)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    localStorage.setItem("upgrade", "true");
+  };
+
   const play = async () => {
     if (
       !account ||
@@ -888,10 +920,23 @@ const JackpotGame: React.FC = () => {
 
       <Card className="bg-blue-100 border-blue-300">
         <CardContent className="p-4">
-          <p className="text-blue-800">Note: To use your free plays, you must first deposit for at least one paid spin.
+          <p className="text-blue-800">
+            Note: To use your free plays, you must first deposit for
+            at least one paid spin.
           </p>
         </CardContent>
       </Card>
+      {!isMigrated && (
+        <Card className="bg-blue-100 border-blue-300">
+          <CardContent className="p-4">
+            <p className="text-blue-800">
+              We recently upgraded our contracts, please click the
+              button below to migrate
+            </p>
+            <Button onClick={migrateContract}>Migrate</Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-gradient-to-b from-gray-900 to-gray-800">
         <CardContent className="pt-6">
