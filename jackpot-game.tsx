@@ -261,10 +261,12 @@ const JackpotGame: React.FC = () => {
   const [message, setMessage] = useState("");
   const [tokenPrice, setTokenPrice] = useState(0);
   const [isMigrated, setIsMigrated] = useState(false);
+  const [isCardVisible, setIsCardVisible] = useState(true);
 
   useEffect(() => {
     if (window) {
       setIsMigrated(Boolean(window.localStorage.getItem("upgrade")));
+      setIsCardVisible(window.localStorage.getItem("cardVisible") !== "false");
     }
   }, []);
 
@@ -918,22 +920,44 @@ const JackpotGame: React.FC = () => {
         </Card>
       )}
 
-      <Card className="bg-blue-100 border-blue-300">
-        <CardContent className="p-4">
-          <p className="text-blue-800">
-            Note: To use your free plays, you must first deposit for
-            at least one paid spin.
-          </p>
-        </CardContent>
-      </Card>
+      {isCardVisible && (
+        <Card className="bg-blue-100 border-blue-300">
+          <CardContent className="p-4 flex justify-between items-center">
+            <p className="text-blue-800">
+              Note: To use your free plays, you must first deposit for
+              at least one paid spin.
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem("cardVisible", "false");
+                setIsCardVisible(false)
+              }}
+              className="text-blue-800 hover:text-blue-900"
+            >
+              ×
+            </button>
+          </CardContent>
+        </Card>
+      )}
       {!isMigrated && (
         <Card className="bg-blue-100 border-blue-300">
-          <CardContent className="p-4">
+          <CardContent className="p-4 flex justify-between items-center">
             <p className="text-blue-800">
               We recently upgraded our contracts, please click the
               button below to migrate
             </p>
-            <Button onClick={migrateContract}>Migrate</Button>
+            <div className="flex gap-2 items-center">
+              <Button onClick={migrateContract}>Migrate</Button>
+              <button
+                onClick={() => {
+                  localStorage.setItem("upgrade", "true")
+                  setIsMigrated(true)
+                }}
+                className="text-blue-800 hover:text-blue-900"
+              >
+                ×
+              </button>
+            </div>
           </CardContent>
         </Card>
       )}
