@@ -3,7 +3,7 @@ import { NextResponse, NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
     const { player } = await request.json()
-    const { data: { hash } } = await axios.post("https://d2b7-103-211-17-151.ngrok-free.app/play", {
+    const { data: { hash } } = await axios.post("https://jackpotgame.up.railway.app/play", {
         player
     }, {
         headers: {
