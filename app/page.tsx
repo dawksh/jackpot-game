@@ -1,10 +1,30 @@
 "use client"
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { createConfig, http, WagmiProvider } from "wagmi"
 import JackpotGame from "../jackpot-game"
-import { Inter, Montserrat } from 'next/font/google'
+import { base } from "viem/chains"
+import '@rainbow-me/rainbowkit/styles.css';
 
-const inter = Inter({ subsets: ['latin'] })
-const montserrat = Montserrat({ subsets: ['latin'] })
+import {
+  getDefaultConfig,
+  RainbowKitProvider,
+} from '@rainbow-me/rainbowkit';
+
+const config = getDefaultConfig({
+  appName: 'Jackpot Game',
+  projectId: process.env.NEXT_PUBLIC_PROJECT_ID as string,
+  chains: [base],
+  ssr: false,
+});
+
+const client = new QueryClient();
+// export const config = createConfig({
+//   chains: [base],
+//   transports: {
+//     [base.id]: http(),
+//   },
+// });
 
 export default function SyntheticV0PageForDeployment() {
   // return (
@@ -18,6 +38,12 @@ export default function SyntheticV0PageForDeployment() {
   //   </div>
   // )
   return (
-    <JackpotGame />
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={client}>
+        <RainbowKitProvider>
+          <JackpotGame />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   )
 }

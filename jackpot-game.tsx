@@ -5,9 +5,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Wallet, Play, Plus, Minus, HelpCircle } from "lucide-react";
+import { Play, Plus, Minus, HelpCircle } from "lucide-react";
 import { JackpotABI } from "./JackpotABI";
-import Web3 from "web3";
 import {
   Dialog,
   DialogContent,
@@ -18,16 +17,24 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import axios from "axios";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
+import {
+  createPublicClient,
+  formatUnits,
+  http,
+  parseUnits,
+} from "viem";
+import { base } from "viem/chains";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
-
-const web3 = new Web3(
-  new Web3.providers.HttpProvider(process.env.NEXT_PUBLIC_RPC_URL as string)
-);
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(process.env.NEXT_PUBLIC_RPC_URL),
+});
 
 const JACKPOT_ADDRESS = "0x1b7fE509d6129166a77aE351ce48b531F0946D82";
 const CLAIM_CONTRACT_ADDRESS: `0x${string}` =
@@ -106,13 +113,13 @@ interface SlotReelProps {
 
 const sendPlayTxn = async (address: `0x${string}`) => {
   await axios.post("/api/play", {
-    player: address
-  })
+    player: address,
+  });
 };
 
 const checkAllowance = async (amount: number, user: `0x${string}`) => {
-  const contract = new web3.eth.Contract(
-    [
+  const { data: allowance } = useReadContract({
+    abi: [
       {
         constant: true,
         inputs: [
@@ -136,13 +143,12 @@ const checkAllowance = async (amount: number, user: `0x${string}`) => {
         stateMutability: "view",
         type: "function",
       },
-    ],
-    JACKPOT_ADDRESS
-  );
+    ] as const,
+    address: JACKPOT_ADDRESS,
+    functionName: "allowance",
+    args: [user, CLAIM_CONTRACT_ADDRESS],
+  });
 
-  const allowance = await contract.methods
-    .allowance(user, CLAIM_CONTRACT_ADDRESS)
-    .call();
   return Number(allowance) > amount;
 };
 
@@ -242,7 +248,7 @@ interface PrizePool {
 }
 
 const JackpotGame: React.FC = () => {
-  const [account, setAccount] = useState<`0x${string}` | null>(null);
+  const { address } = useAccount();
   const [prizePool, setPrizePool] = useState<PrizePool>({
     usd: 0,
     tokens: 0,
@@ -263,18 +269,22 @@ const JackpotGame: React.FC = () => {
   const [isMigrated, setIsMigrated] = useState(false);
   const [isCardVisible, setIsCardVisible] = useState(true);
 
+  const { writeContractAsync } = useWriteContract();
+
   useEffect(() => {
     if (window) {
       setIsMigrated(Boolean(window.localStorage.getItem("upgrade")));
-      setIsCardVisible(window.localStorage.getItem("cardVisible") !== "false");
+      setIsCardVisible(
+        window.localStorage.getItem("cardVisible") !== "false"
+      );
     }
   }, []);
 
   const getTokenBalance = useCallback(
     async (tokenAddress: string, walletAddress: string) => {
       try {
-        const contract = new web3.eth.Contract(
-          [
+        const balance = await publicClient.readContract({
+          abi: [
             {
               constant: true,
               inputs: [{ name: "_owner", type: "address" }],
@@ -282,14 +292,11 @@ const JackpotGame: React.FC = () => {
               outputs: [{ name: "balance", type: "uint256" }],
               type: "function",
             },
-          ],
-          tokenAddress
-        );
-
-        const balance = await contract.methods
-          .balanceOf(walletAddress)
-          .call();
-        return web3.utils.fromWei(Number(balance), "ether");
+          ] as const,
+          address: tokenAddress as `0x${string}`,
+          functionName: "balanceOf",
+        });
+        return formatUnits(balance as any, 18);
       } catch (error) {
         console.error(
           `Failed to get balance for token ${tokenAddress}:`,
@@ -314,16 +321,14 @@ const JackpotGame: React.FC = () => {
 
   const getJackpotPrize = useCallback(async () => {
     try {
-      const contract = new web3.eth.Contract(
-        JackpotABI,
-        CLAIM_CONTRACT_ADDRESS
-      );
-      const prizeWalletBalance = await contract.methods
-        .getPrizePoolBalance()
-        .call();
+      const prizeWalletBalance = await publicClient.readContract({
+        abi: JackpotABI,
+        address: CLAIM_CONTRACT_ADDRESS,
+        functionName: "getPrizePoolBalance",
+      });
 
       const tokensAmount = Number.parseFloat(
-        web3.utils.fromWei(Number(prizeWalletBalance), "ether")
+        formatUnits(prizeWalletBalance as any, 18).toString()
       );
       const usdValue = tokensAmount * tokenPrice;
 
@@ -338,15 +343,10 @@ const JackpotGame: React.FC = () => {
   }, [tokenPrice]);
 
   const claimPrize = async () => {
-    if (!account || !hasWon) return;
+    if (!address || !hasWon) return;
     try {
-      const contract = new web3.eth.Contract(
-        JackpotABI,
-        CLAIM_CONTRACT_ADDRESS
-      );
       setMessage("Preparing to claim prize...");
-
-      const amountInWei = web3.utils.toWei(winAmount.toString(), "ether");
+      const amountInWei = parseUnits(winAmount.toString(), 18);
       console.log(
         "Attempting to claim prize amount (in Wei):",
         amountInWei
@@ -358,45 +358,25 @@ const JackpotGame: React.FC = () => {
         data: { signature },
       } = await axios.get("/api/signature", {
         params: {
-          amount: amountInWei,
-          winner: account,
+          amount: amountInWei.toString(),
+          winner: address,
         },
       });
 
-      const { data } = contract.methods
-        .claim(signature, BigInt(amountInWei))
-        .populateTransaction({
-          from: account,
-        });
-
-      const tx = await window.ethereum.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: account,
-            to: CLAIM_CONTRACT_ADDRESS,
-            data,
-          },
-        ],
+      const tx = await writeContractAsync({
+        abi: JackpotABI,
+        address: CLAIM_CONTRACT_ADDRESS,
+        functionName: "claim",
+        args: [signature, amountInWei],
       });
-
-      let receipt = null;
-      while (!receipt) {
-        receipt = await window.ethereum.request({
-          method: "eth_getTransactionReceipt",
-          params: [tx],
-        });
-        if (!receipt)
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
 
       console.log("Transaction result:", tx);
 
-      if (receipt) {
+      if (tx) {
         setHasWon(false);
         setWinAmount(0);
         setMessage("Prize claimed successfully!");
-        await getPlayerBalances(account);
+        await getPlayerBalances(address);
         await getJackpotPrize();
       } else {
         throw new Error("Prize claim transaction failed");
@@ -467,87 +447,20 @@ const JackpotGame: React.FC = () => {
     console.log(`Updated free plays for ${address}: ${storedFreePlays}`);
   };
 
-  const connectWallet = async () => {
-    if (!window.ethereum) return;
-    try {
-      const chainId = await window.ethereum.request({
-        method: "eth_chainId",
-      });
-      if (chainId !== BASE_NETWORK.chainId) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [BASE_NETWORK],
-          });
-        } catch (error) {
-          console.error("Failed to switch network:", error);
-          alert("Please switch to the Base network to play.");
-          return;
-        }
-      }
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      const connectedAccount = accounts[0];
-      setAccount(connectedAccount);
-      window.ethereum.on("accountsChanged", handleAccountChange);
-
-      const storedPlays = await getStoredPlays(connectedAccount);
-      const storedFreePlays = getStoredFreePlays(connectedAccount);
-      setPlayerState((prev) => ({
-        ...prev,
-        purchasedPlays: storedPlays,
-        freePlays: storedFreePlays,
-      }));
-      await getPlayerBalances(connectedAccount);
-      console.log(
-        `Connected wallet: ${connectedAccount}. Stored plays: ${storedPlays}, Free plays: ${storedFreePlays}`
-      );
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-    }
-  };
-
-  const disconnectWallet = () => {
-    if (account) {
-      updateStoredPlays(account, playerState.purchasedPlays);
-      updateStoredFreePlays(account, playerState.freePlays);
-      console.log(
-        `Disconnecting wallet: ${account}. Storing plays: ${playerState.purchasedPlays}, Free plays: ${playerState.freePlays}`
-      );
-    }
-    setAccount(null);
-    setPlayerState({
-      freePlays: 0,
-      purchasedPlays: 0,
-      tokenBalance: "0",
-      clanksterBalance: "0",
-    });
-    window.ethereum?.removeListener("accountsChanged", handleAccountChange);
-  };
-
-  const handleAccountChange = (accounts: string[]) => {
-    if (accounts.length > 0) {
-      setAccount(accounts[0] as any);
-    } else {
-      disconnectWallet();
-    }
-  };
-
   const deposit = async () => {
-    if (!account) return;
+    if (!address) return;
     if (depositAmount > 10) {
       setMessage("Cannot deposit for more than 10 plays.");
       return;
     }
     const isAllowed = await checkAllowance(
       PLAY_COST * depositAmount * 10 ** 18,
-      account
+      address
     );
     try {
       if (!isAllowed) {
-        const contract = new web3.eth.Contract(
-          [
+        const tx = await writeContractAsync({
+          abi: [
             {
               constant: true,
               inputs: [
@@ -571,60 +484,20 @@ const JackpotGame: React.FC = () => {
               stateMutability: "view",
               type: "function",
             },
-          ],
-          JACKPOT_ADDRESS
-        );
-        const { data } = contract.methods
-          .approve(CLAIM_CONTRACT_ADDRESS, 100 * PLAY_COST * 10 ** 18)
-          .populateTransaction({
-            from: account,
-          });
-        const txHash = await window.ethereum.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              from: account,
-              to: JACKPOT_ADDRESS,
-              data,
-            },
-          ],
+          ] as const,
+          address: JACKPOT_ADDRESS,
+          args: [CLAIM_CONTRACT_ADDRESS, 100 * PLAY_COST * 10 ** 18],
+          functionName: "approve",
         });
-        let receipt = null;
-        while (!receipt) {
-          receipt = await window.ethereum.request({
-            method: "eth_getTransactionReceipt",
-            params: [txHash],
-          });
-          if (!receipt)
-            await new Promise((resolve) =>
-              setTimeout(resolve, 1000)
-            );
-        }
       }
-      const txHash = await window.ethereum.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: account,
-            to: CLAIM_CONTRACT_ADDRESS,
-            data: `0xb6b55f25${depositAmount
-              .toString()
-              .padStart(64, "0")}`,
-          },
-        ],
+      const txHash = await writeContractAsync({
+        abi: JackpotABI,
+        address: CLAIM_CONTRACT_ADDRESS,
+        functionName: "deposit",
+        args: [depositAmount],
       });
 
-      let receipt = null;
-      while (!receipt) {
-        receipt = await window.ethereum.request({
-          method: "eth_getTransactionReceipt",
-          params: [txHash],
-        });
-        if (!receipt)
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      await getPlayerBalances(account);
+      await getPlayerBalances(address);
       await getJackpotPrize();
       const newPurchasedPlays =
         playerState.purchasedPlays + depositAmount;
@@ -632,7 +505,7 @@ const JackpotGame: React.FC = () => {
         ...prev,
         purchasedPlays: newPurchasedPlays,
       }));
-      updateStoredPlays(account, newPurchasedPlays);
+      updateStoredPlays(address, newPurchasedPlays);
       console.log(
         `Deposit successful. New purchased plays: ${newPurchasedPlays}`
       );
@@ -647,51 +520,26 @@ const JackpotGame: React.FC = () => {
     if (isMigrated) {
       return;
     }
-    const contract = new web3.eth.Contract(
-      JackpotABI,
-      CLAIM_CONTRACT_ADDRESS
-    );
 
-    const { data } = contract.methods
-      .updateContract()
-      .populateTransaction({
-        from: account as string,
-      });
-
-    const tx = await window.ethereum.request({
-      method: "eth_sendTransaction",
-      params: [
-        {
-          from: account,
-          to: CLAIM_CONTRACT_ADDRESS,
-          data,
-        },
-      ],
+    await writeContractAsync({
+      abi: JackpotABI,
+      address: CLAIM_CONTRACT_ADDRESS,
+      functionName: "updateContract",
     });
-
-    let receipt = null;
-    while (!receipt) {
-      receipt = await window.ethereum.request({
-        method: "eth_getTransactionReceipt",
-        params: [tx],
-      });
-      if (!receipt)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
 
     localStorage.setItem("upgrade", "true");
   };
 
   const play = async () => {
     if (
-      !account ||
+      !address ||
       isSpinning ||
       (playerState.purchasedPlays === 0 && playerState.freePlays === 0)
     )
       return;
     try {
-      const storedPlays = await getStoredPlays(account);
-      const storedFreePlays = getStoredFreePlays(account);
+      const storedPlays = await getStoredPlays(address);
+      const storedFreePlays = getStoredFreePlays(address);
       setPlayerState((prev) => ({
         ...prev,
         purchasedPlays: storedPlays,
@@ -700,7 +548,7 @@ const JackpotGame: React.FC = () => {
       setIsSpinning(true);
       setMessage("");
 
-      if (playerState.purchasedPlays != 0) await sendPlayTxn(account);
+      if (playerState.purchasedPlays != 0) await sendPlayTxn(address);
 
       let spinning = true;
 
@@ -762,8 +610,8 @@ const JackpotGame: React.FC = () => {
           newPurchasedPlays -= 1;
         }
 
-        updateStoredPlays(account, newPurchasedPlays);
-        updateStoredFreePlays(account, newFreePlays);
+        updateStoredPlays(address, newPurchasedPlays);
+        updateStoredFreePlays(address, newFreePlays);
 
         console.log(
           `Play completed. New free plays: ${newFreePlays}, New purchased plays: ${newPurchasedPlays}`
@@ -796,20 +644,20 @@ const JackpotGame: React.FC = () => {
   }, [fetchTokenPrice, getJackpotPrize]);
 
   useEffect(() => {
-    if (account) {
-      getPlayerBalances(account);
+    if (address) {
+      getPlayerBalances(address);
     }
-  }, [account, getPlayerBalances]);
+  }, [address, getPlayerBalances]);
 
   useEffect(() => {
     const checkDailyReset = () => {
-      if (account) {
-        const lastResetTime = getLastResetTime(account);
+      if (address) {
+        const lastResetTime = getLastResetTime(address);
         const currentTime = Date.now();
         const oneDayInMs = 24 * 60 * 60 * 1000;
 
         if (currentTime - lastResetTime >= oneDayInMs) {
-          getPlayerBalances(account);
+          getPlayerBalances(address);
         }
       }
     };
@@ -818,7 +666,7 @@ const JackpotGame: React.FC = () => {
     const intervalId = setInterval(checkDailyReset, 60000); // Check every minute
 
     return () => clearInterval(intervalId);
-  }, [account, getPlayerBalances]);
+  }, [address, getPlayerBalances]);
 
   const formatNumber = (num: number | string): string => {
     return Math.floor(Number.parseFloat(num.toString())).toLocaleString();
@@ -834,12 +682,12 @@ const JackpotGame: React.FC = () => {
   };
 
   const getStoredPlays = async (address: string): Promise<number> => {
-    const contract = new web3.eth.Contract(
-      JackpotABI,
-      CLAIM_CONTRACT_ADDRESS
-    );
-    const plays = await contract.methods.playsLeft(address).call();
-    console.log(plays);
+    const plays = await publicClient.readContract({
+      abi: JackpotABI,
+      address: CLAIM_CONTRACT_ADDRESS,
+      functionName: "playsLeft",
+      args: [address],
+    });
     return Number(plays);
   };
 
@@ -924,13 +772,13 @@ const JackpotGame: React.FC = () => {
         <Card className="bg-blue-100 border-blue-300">
           <CardContent className="p-4 flex justify-between items-center">
             <p className="text-blue-800">
-              Note: To use your free plays, you must first deposit for
-              at least one paid spin.
+              Note: To use your free plays, you must first deposit
+              for at least one paid spin.
             </p>
             <button
               onClick={() => {
                 localStorage.setItem("cardVisible", "false");
-                setIsCardVisible(false)
+                setIsCardVisible(false);
               }}
               className="text-blue-800 hover:text-blue-900"
             >
@@ -950,8 +798,8 @@ const JackpotGame: React.FC = () => {
               <Button onClick={migrateContract}>Migrate</Button>
               <button
                 onClick={() => {
-                  localStorage.setItem("upgrade", "true")
-                  setIsMigrated(true)
+                  localStorage.setItem("upgrade", "true");
+                  setIsMigrated(true);
                 }}
                 className="text-blue-800 hover:text-blue-900"
               >
@@ -980,7 +828,7 @@ const JackpotGame: React.FC = () => {
 
           <Button
             onClick={play}
-            disabled={!account || isSpinning}
+            disabled={!address || isSpinning}
             className="w-full h-16 text-xl"
           >
             <Play className="w-6 h-6 mr-2" />
@@ -992,21 +840,15 @@ const JackpotGame: React.FC = () => {
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
-            {!account ? (
-              <Button
-                onClick={connectWallet}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <Wallet className="w-4 h-4" />
-                Connect Wallet
-              </Button>
+            {!address ? (
+              <ConnectButton />
             ) : (
               <>
                 <div className="flex justify-between">
                   <span>Connected Address:</span>
                   <span className="font-mono text-sm">
-                    {account.slice(0, 6)}...
-                    {account.slice(-4)}
+                    {address.slice(0, 6)}...
+                    {address.slice(-4)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1071,7 +913,7 @@ const JackpotGame: React.FC = () => {
                 <Button
                   onClick={deposit}
                   className="w-full"
-                  disabled={!account}
+                  disabled={!address}
                 >
                   Deposit for {depositAmount} Play
                   {depositAmount !== 1 ? "s" : ""}
@@ -1085,14 +927,6 @@ const JackpotGame: React.FC = () => {
                     Claim {formatNumber(winAmount)} $JACKPOT
                   </Button>
                 )}
-                <Button
-                  onClick={disconnectWallet}
-                  variant="destructive"
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <Wallet className="w-4 h-4" />
-                  Disconnect Wallet
-                </Button>
               </>
             )}
           </div>
