@@ -17,17 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import axios from "axios";
-import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-} from "wagmi";
-import {
-  createPublicClient,
-  formatUnits,
-  http,
-  parseUnits,
-} from "viem";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { createPublicClient, formatUnits, http, parseUnits } from "viem";
 import { base } from "viem/chains";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
@@ -115,41 +106,6 @@ const sendPlayTxn = async (address: `0x${string}`) => {
   await axios.post("/api/play", {
     player: address,
   });
-};
-
-const checkAllowance = async (amount: number, user: `0x${string}`) => {
-  const { data: allowance } = useReadContract({
-    abi: [
-      {
-        constant: true,
-        inputs: [
-          {
-            name: "_owner",
-            type: "address",
-          },
-          {
-            name: "_spender",
-            type: "address",
-          },
-        ],
-        name: "allowance",
-        outputs: [
-          {
-            name: "",
-            type: "uint256",
-          },
-        ],
-        payable: false,
-        stateMutability: "view",
-        type: "function",
-      },
-    ] as const,
-    address: JACKPOT_ADDRESS,
-    functionName: "allowance",
-    args: [user, CLAIM_CONTRACT_ADDRESS],
-  });
-
-  return Number(allowance) > amount;
 };
 
 const SlotReel: React.FC<SlotReelProps> = ({ spinning, symbol, index }) => {
@@ -268,6 +224,42 @@ const JackpotGame: React.FC = () => {
   const [tokenPrice, setTokenPrice] = useState(0);
   const [isMigrated, setIsMigrated] = useState(false);
   const [isCardVisible, setIsCardVisible] = useState(true);
+  const { data: allowance, refetch } = useReadContract({
+    abi: [
+      {
+        constant: true,
+        inputs: [
+          {
+            name: "_owner",
+            type: "address",
+          },
+          {
+            name: "_spender",
+            type: "address",
+          },
+        ],
+        name: "allowance",
+        outputs: [
+          {
+            name: "",
+            type: "uint256",
+          },
+        ],
+        payable: false,
+        stateMutability: "view",
+        type: "function",
+      },
+    ] as const,
+    address: JACKPOT_ADDRESS,
+    functionName: "allowance",
+    args: [address as `0x${string}`, CLAIM_CONTRACT_ADDRESS],
+    query: {
+      enabled: !!address,
+    },
+  });
+  const checkAllowance = async (amount: number, user: `0x${string}`) => {
+    return Number(allowance) > amount;
+  };
 
   const { writeContractAsync } = useWriteContract();
 
