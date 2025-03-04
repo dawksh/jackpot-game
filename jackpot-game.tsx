@@ -833,7 +833,9 @@ const JackpotGame: React.FC = () => {
         <CardContent className="pt-6">
           <div className="space-y-4">
             {!address ? (
-              <ConnectButton />
+              <div className="flex justify-center items-center">
+                <ConnectButton />
+              </div>
             ) : (
               <>
                 <div className="flex justify-between">

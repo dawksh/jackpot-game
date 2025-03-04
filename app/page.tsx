@@ -1,10 +1,40 @@
-"use client"
+// "use client"
+import { Metadata } from "next";
 import dynamic from "next/dynamic";
-// import JackpotGame from "../jackpot-game"
 
 const JackpotGame = dynamic(() => import('@/components/game-wrapper'), {
   ssr: false,
 });
+
+const frame = {
+  version: "next",
+  imageUrl: `https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png`,
+  button: {
+    title: "Launch Frame",
+    action: {
+      type: "launch_frame",
+      name: "Jackpot Casino",
+      url: "https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png",
+      splashImageUrl: "https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png",
+      splashBackgroundColor: "#f7f7f7",
+    },
+  },
+};
+
+export const revalidate = 300;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Jackpot Casino",
+    openGraph: {
+      title: "Jackpot Casino",
+      description: "A Jackpot Casino game frame by Clankster.",
+    },
+    other: {
+      "fc:frame": JSON.stringify(frame),
+    },
+  };
+}
 
 
 export default function Page() {
