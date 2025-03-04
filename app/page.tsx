@@ -13,9 +13,9 @@ const frame = {
     action: {
       type: "launch_frame",
       name: "Jackpot Casino",
-      url: "https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png",
-      splashImageUrl: "https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png",
-      splashBackgroundColor: "#f7f7f7",
+      url: "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
+      splashImageUrl: "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
+      splashBackgroundColor: "#4a7cf7",
     },
   },
 };
