@@ -1,0 +1,18 @@
+{
+    "accountAssociation": {
+        "header": "eyJmaWQiOjI0ODMsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg1MzkyNWIyQzI3NjQ5QkU3ODZiZDMxMTU5ODBjOGU3YjEyOUY4RTE0In0",
+        "payload": "eyJkb21haW4iOiJqYWNrcG90Z2FtZS5jYXNpbm8ifQ",
+        "signature": "MHgwYTIwNGZkMTY5YjM0ODdjYmVkNDJkODk4ZjZiMjM0ZGRhNzg4M2IxNmQ5MjBhYTZmNThlOTQ3YTc4NGY0ODYyMjBiMjJlMjdjZTM2MzZlZTk4Y2FmZjU1MmE2MmQ5ZGY3OThlYmQ2ODNhZTEzMzhkNDBlZjA1ODFhYzg2MTJiMTFi"
+    },
+    "frame": {
+        "version": "1",
+        "name": "Jackpot Game",
+        "iconUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
+        "homeUrl": "https://jackpotgame.casino",
+        "imageUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
+        "buttonTitle": "Play",
+        "splashImageUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
+        "splashBackgroundColor": "#4a7cf7",
+        "webhookUrl": "https://jackpotgame.casino/api/webhook"
+    }
+}

@@ -7,9 +7,9 @@ const JackpotGame = dynamic(() => import('@/components/game-wrapper'), {
 
 const frame = {
   version: "next",
-  imageUrl: `https://res.cloudinary.com/metapass/image/upload/v1741073315/ico_fugiap.png`,
+  imageUrl: `https://i.ibb.co/VY9f2MCP/IMG-1693.jpg`,
   button: {
-    title: "Launch Frame",
+    title: "Play",
     action: {
       type: "launch_frame",
       name: "Jackpot Casino",
