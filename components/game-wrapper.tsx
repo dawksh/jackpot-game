@@ -13,9 +13,9 @@ const GameWrapper = () => {
             setContext(await sdk.context);
             sdk.actions.ready();
         };
+        load();
         if (sdk && !isSDKLoaded) {
             setIsSDKLoaded(true);
-            load();
         }
     }, [isSDKLoaded]);
 
