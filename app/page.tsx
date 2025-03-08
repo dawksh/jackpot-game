@@ -1,9 +1,8 @@
-import GameWrapper from "@/components/game-wrapper";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
-const JackpotGame = dynamic(() => import('@/components/game-wrapper'), {
-  ssr: false,
+const GameWrapper = dynamic(() => import('@/components/game-wrapper'), {
+  ssr: true,
 });
 
 const frame = {
@@ -39,6 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function Page() {
   return (
-    < GameWrapper />
+    <GameWrapper />
   )
 }
