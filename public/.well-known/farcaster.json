@@ -10,9 +10,8 @@
         "iconUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
         "homeUrl": "https://jackpotgame.casino",
         "imageUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
-        "buttonTitle": "Play",
+        "buttonTitle": "PLay",
         "splashImageUrl": "https://i.ibb.co/VY9f2MCP/IMG-1693.jpg",
-        "splashBackgroundColor": "#4a7cf7",
-        "webhookUrl": "https://jackpotgame.casino/api/webhook"
+        "splashBackgroundColor": "#4a7cf7"
     }
 }
